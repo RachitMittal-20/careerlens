@@ -25,3 +25,51 @@ class JDData(BaseModel):
     experience_requirements: list[str]
     education_requirements: list[str]
     top_keyphrases: list[str]
+
+
+class ATSScore(BaseModel):
+    score: int
+    grade: str
+    technical_score: float
+    skills_score: float
+    experience_score: float
+    education_score: float
+    matched_count: int
+    total_keywords: int
+    feedback: str
+
+
+class MatchedKeyword(BaseModel):
+    keyword: str
+    category: str
+
+
+class MissingKeyword(BaseModel):
+    keyword: str
+    category: str
+    priority: str
+
+
+class PartialKeyword(BaseModel):
+    keyword: str
+    category: str
+    resume_match: str
+
+
+class BonusKeyword(BaseModel):
+    keyword: str
+
+
+class KeywordAnalysis(BaseModel):
+    matched: list[MatchedKeyword]
+    missing: list[MissingKeyword]
+    partial: list[PartialKeyword]
+    bonus: list[BonusKeyword]
+    match_rate: float
+
+
+class AnalyzeResponse(BaseModel):
+    resume_data: ResumeData
+    jd_data: JDData
+    ats_score: ATSScore
+    keyword_analysis: KeywordAnalysis
