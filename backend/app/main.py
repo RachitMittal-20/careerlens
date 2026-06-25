@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routes.analyze import router as analyze_router
 from app.routes.rewrite import router as rewrite_router
 from app.routes.compare import router as compare_router
+from app.routes.export import router as export_router
 
 app = FastAPI(title="CareerLens API")
 
@@ -19,6 +20,7 @@ app.add_middleware(
 app.include_router(analyze_router, prefix="/api")
 app.include_router(rewrite_router, prefix="/api")
 app.include_router(compare_router, prefix="/api")
+app.include_router(export_router, prefix="/api")
 
 
 @app.get("/health")

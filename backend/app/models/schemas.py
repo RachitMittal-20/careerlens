@@ -93,6 +93,14 @@ class RewriteResponse(BaseModel):
     rewrites: list[RewriteResult]
 
 
+# --- Export schemas ---
+
+class ExportRequest(BaseModel):
+    resume_data: dict
+    optimized_bullets: list[dict] = []
+    filename: str = "resume"
+
+
 # --- Compare schemas ---
 
 class CompareRequest(BaseModel):

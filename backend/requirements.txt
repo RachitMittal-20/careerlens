@@ -9,3 +9,4 @@ keybert
 sentence-transformers
 groq
 langchain-groq
+reportlab
