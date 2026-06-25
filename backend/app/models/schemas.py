@@ -73,3 +73,36 @@ class AnalyzeResponse(BaseModel):
     jd_data: JDData
     ats_score: ATSScore
     keyword_analysis: KeywordAnalysis
+
+
+# --- Rewrite schemas ---
+
+class RewriteRequest(BaseModel):
+    bullets: list[str]
+    jd_keywords: list[str]
+    role_title: str
+
+
+class RewriteResult(BaseModel):
+    original: str
+    rewritten: str
+    keywords_added: list[str]
+
+
+class RewriteResponse(BaseModel):
+    rewrites: list[RewriteResult]
+
+
+# --- Compare schemas ---
+
+class CompareRequest(BaseModel):
+    jd_texts: list[str]
+
+
+class CompareResponse(BaseModel):
+    universal_keywords: list[str]
+    common_keywords: list[str]
+    unique_per_jd: list[list[str]]
+    overlap_matrix: list[list[float]]
+    recommendation: str
+    jd_count: int
