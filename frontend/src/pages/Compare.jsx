@@ -1,37 +1,98 @@
 import { CheckCircle, Lightbulb, Loader2 } from 'lucide-react'
 import { useState } from 'react'
+import { useTheme } from '../context/ThemeContext'
 import { compareJDs } from '../services/api'
 
-function Card({ children, className = '' }) {
+const cs = (isDark) => ({
+  background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.65)',
+  backdropFilter: 'blur(20px)',
+  WebkitBackdropFilter: 'blur(20px)',
+  border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(255,255,255,0.85)',
+  borderRadius: '16px',
+  boxShadow: isDark
+    ? '0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)'
+    : '0 8px 32px rgba(124,58,237,0.1), inset 0 1px 0 rgba(255,255,255,0.9)',
+})
+
+const is = (isDark) => ({
+  width: '100%',
+  background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.6)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+  border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(209,196,233,0.8)',
+  color: isDark ? '#f5f0ff' : '#1e1333',
+  borderRadius: '8px',
+  padding: '8px 12px',
+  fontSize: '14px',
+  outline: 'none',
+  resize: 'none',
+  transition: 'border-color 0.2s, box-shadow 0.2s',
+})
+
+const tc = (isDark) => ({
+  primary:   isDark ? '#f5f0ff' : '#1e1333',
+  secondary: isDark ? '#c4b5fd' : '#4c1d95',
+  label:     isDark ? '#a78bfa' : '#6d28d9',
+})
+
+function StyledInput({ isDark, ...props }) {
+  const [focused, setFocused] = useState(false)
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 ${className}`}>
-      {children}
-    </div>
+    <input
+      {...props}
+      style={{ ...is(isDark), ...(focused ? { borderColor: 'var(--accent)', boxShadow: '0 0 0 3px var(--accent-glow)' } : {}) }}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+    />
   )
 }
 
-function Pill({ text, variant = 'blue' }) {
+function StyledTextarea({ isDark, style, ...props }) {
+  const [focused, setFocused] = useState(false)
+  return (
+    <textarea
+      {...props}
+      style={{
+        ...is(isDark),
+        ...(focused ? { borderColor: 'var(--accent)', boxShadow: '0 0 0 3px var(--accent-glow)' } : {}),
+        ...style,
+      }}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+    />
+  )
+}
+
+function Pill({ text, variant = 'purple', isDark }) {
   const styles = {
-    green: 'bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400',
-    blue:  'bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400',
-    gray:  'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400',
+    purple: { background: isDark ? 'rgba(139,92,246,0.12)' : 'rgba(124,58,237,0.1)', color: isDark ? '#c4b5fd' : '#6d28d9', border: '1px solid rgba(124,58,237,0.25)' },
+    violet: { background: isDark ? 'rgba(167,139,250,0.1)' : 'rgba(124,58,237,0.08)', color: 'var(--accent)', border: '1px solid rgba(124,58,237,0.2)' },
+    gray:   { background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', color: isDark ? '#c4b5fd' : '#4c1d95', border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(124,58,237,0.15)' },
   }
   return (
-    <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${styles[variant]}`}>{text}</span>
+    <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backdropFilter: 'blur(10px)', ...styles[variant] }}>
+      {text}
+    </span>
   )
 }
 
-function OverlapBar({ label, value }) {
+function OverlapBar({ label, value, isDark }) {
+  const c = tc(isDark)
   const pct = Math.round(value * 100)
-  const color = pct >= 60 ? 'bg-green-500' : pct >= 40 ? 'bg-yellow-500' : 'bg-red-500'
+  const barColor = pct >= 60
+    ? 'linear-gradient(90deg, #7c3aed, #a78bfa)'
+    : pct >= 40
+    ? 'linear-gradient(90deg, #d97706, #f59e0b)'
+    : 'linear-gradient(90deg, #dc2626, #ef4444)'
+
   return (
     <div>
       <div className="flex justify-between text-xs mb-1">
-        <span className="text-gray-600 dark:text-gray-400">{label}</span>
-        <span className="font-semibold text-gray-800 dark:text-gray-200">{pct}%</span>
+        <span style={{ color: c.secondary }}>{label}</span>
+        <span className="font-semibold" style={{ color: c.primary, fontFamily: "'JetBrains Mono', monospace" }}>{pct}%</span>
       </div>
-      <div className="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
-        <div className={`h-2 rounded-full ${color} transition-all duration-700`} style={{ width: `${pct}%` }} />
+      <div className="h-2 rounded-full" style={{ background: isDark ? 'rgba(139,92,246,0.2)' : 'rgba(124,58,237,0.15)' }}>
+        <div className="h-2 rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: barColor }} />
       </div>
     </div>
   )
@@ -40,11 +101,15 @@ function OverlapBar({ label, value }) {
 const EMPTY_JD = { title: '', text: '' }
 
 export default function Compare() {
-  const [jds, setJds]           = useState([{ ...EMPTY_JD }, { ...EMPTY_JD }, { ...EMPTY_JD }])
+  const { isDark } = useTheme()
+  const c = tc(isDark)
+  const CARD = cs(isDark)
+
+  const [jds, setJds]             = useState([{ ...EMPTY_JD }, { ...EMPTY_JD }, { ...EMPTY_JD }])
   const [isLoading, setIsLoading] = useState(false)
-  const [results, setResults]   = useState(null)
-  const [error, setError]       = useState(null)
-  const [copied, setCopied]     = useState(false)
+  const [results, setResults]     = useState(null)
+  const [error, setError]         = useState(null)
+  const [copied, setCopied]       = useState(false)
 
   const updateJD = (i, field, val) =>
     setJds(prev => prev.map((jd, idx) => idx === i ? { ...jd, [field]: val } : jd))
@@ -72,47 +137,27 @@ export default function Compare() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  // Build pair labels from filled JD titles
-  const filledWithTitle = jds
-    .map((jd, i) => ({ ...jd, idx: i + 1 }))
-    .filter(jd => jd.text.trim())
+  const filledWithTitle = jds.map((jd, i) => ({ ...jd, idx: i + 1 })).filter(jd => jd.text.trim())
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">Multi-JD Comparison</h1>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+      <h1 className="text-2xl font-bold mb-1" style={{ color: c.primary }}>Multi-JD Comparison</h1>
+      <p className="text-sm mb-6" style={{ color: c.label }}>
         Find the keywords that matter most across multiple job descriptions.
       </p>
 
-      {/* JD inputs */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         {jds.map((jd, i) => {
           const isOptional = i === 2
           const isEmpty = !jd.text.trim()
           return (
-            <div
-              key={i}
-              className={`bg-white dark:bg-gray-800 rounded-xl border p-4 flex flex-col gap-3 transition-opacity ${
-                isOptional && isEmpty
-                  ? 'border-gray-200 dark:border-gray-700 opacity-70'
-                  : 'border-gray-200 dark:border-gray-700'
-              }`}
-            >
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-                JD {i + 1}{isOptional && <span className="ml-1 text-gray-400 font-normal">(Optional)</span>}
+            <div key={i} style={{ ...CARD, padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', opacity: isOptional && isEmpty ? 0.6 : 1 }}>
+              <h3 className="text-sm font-semibold" style={{ color: c.primary }}>
+                JD {i + 1}
+                {isOptional && <span className="ml-1 font-normal" style={{ color: c.label }}>(Optional)</span>}
               </h3>
-              <input
-                value={jd.title}
-                onChange={e => updateJD(i, 'title', e.target.value)}
-                placeholder={`e.g. ${['Google SWE', 'Meta Backend', 'Startup Engineer'][i]}`}
-                className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-colors"
-              />
-              <textarea
-                value={jd.text}
-                onChange={e => updateJD(i, 'text', e.target.value)}
-                placeholder="Paste job description here..."
-                className="flex-1 min-h-40 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none transition-colors"
-              />
+              <StyledInput isDark={isDark} value={jd.title} onChange={e => updateJD(i, 'title', e.target.value)} placeholder={`e.g. ${['Google SWE', 'Meta Backend', 'Startup Engineer'][i]}`} />
+              <StyledTextarea isDark={isDark} value={jd.text} onChange={e => updateJD(i, 'text', e.target.value)} placeholder="Paste job description here..." style={{ flex: 1, minHeight: '160px' }} />
             </div>
           )
         })}
@@ -121,116 +166,89 @@ export default function Compare() {
       <button
         onClick={handleCompare}
         disabled={!canCompare}
-        className="w-full py-3 mb-6 rounded-xl bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium flex items-center justify-center gap-2 transition-all"
+        className="w-full py-3 mb-6 rounded-xl font-medium flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', color: 'white', border: '1px solid rgba(167,139,250,0.3)', boxShadow: '0 4px 24px rgba(124,58,237,0.4)' }}
       >
-        {isLoading
-          ? <><Loader2 size={16} className="animate-spin" /> Comparing...</>
-          : 'Compare JDs'
-        }
+        {isLoading ? <><Loader2 size={16} className="animate-spin" /> Comparing...</> : 'Compare JDs'}
       </button>
 
       {error && (
-        <div className="mb-6 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 p-4 text-sm text-red-700 dark:text-red-400">
+        <div className="mb-6 rounded-xl p-4 text-sm" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: isDark ? '#fca5a5' : '#dc2626' }}>
           {error}
         </div>
       )}
 
       {results && (
         <div className="flex flex-col gap-4">
-          {/* Recommendation */}
-          <div className="rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 p-5 flex gap-3 items-start">
-            <Lightbulb size={18} className="text-blue-500 mt-0.5 shrink-0" />
-            <p className="text-sm italic text-blue-800 dark:text-blue-300">{results.recommendation}</p>
+          <div style={{ ...CARD, padding: '20px', display: 'flex', gap: '12px', alignItems: 'flex-start', border: isDark ? '1px solid rgba(139,92,246,0.25)' : '1px solid rgba(124,58,237,0.2)' }}>
+            <Lightbulb size={18} style={{ color: 'var(--accent)', marginTop: '2px', flexShrink: 0 }} />
+            <p className="text-sm italic" style={{ color: c.secondary }}>{results.recommendation}</p>
           </div>
 
-          {/* Universal keywords */}
-          <Card className="p-5">
+          <div style={{ ...CARD, padding: '20px' }}>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <CheckCircle size={16} className="text-green-500" />
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                <CheckCircle size={16} style={{ color: 'var(--accent)' }} />
+                <h3 className="text-sm font-semibold" style={{ color: c.primary }}>
                   Universal Keywords
-                  <span className="ml-2 text-xs font-normal text-gray-400">appear in all {results.jd_count} JDs</span>
+                  <span className="ml-2 text-xs font-normal" style={{ color: c.label }}>appear in all {results.jd_count} JDs</span>
                 </h3>
               </div>
               {results.universal_keywords.length > 0 && (
-                <button
-                  onClick={() => copyAll(results.universal_keywords)}
-                  className="text-xs px-2.5 py-1 rounded-lg bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-500/20 transition-colors"
-                >
+                <button className="text-xs px-2.5 py-1 rounded-lg transition-colors" style={{ background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.25)', color: 'var(--accent)' }} onClick={() => copyAll(results.universal_keywords)}>
                   {copied ? '✓ Copied!' : 'Copy All'}
                 </button>
               )}
             </div>
             {results.universal_keywords.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {results.universal_keywords.map(kw => <Pill key={kw} text={kw} variant="green" />)}
-              </div>
+              <div className="flex flex-wrap gap-2">{results.universal_keywords.map(kw => <Pill key={kw} text={kw} variant="purple" isDark={isDark} />)}</div>
             ) : (
-              <p className="text-sm text-gray-400">No keywords appear in all job descriptions.</p>
+              <p className="text-sm" style={{ color: c.label }}>No keywords appear in all job descriptions.</p>
             )}
-          </Card>
+          </div>
 
-          {/* Common keywords */}
-          <Card className="p-5">
+          <div style={{ ...CARD, padding: '20px' }}>
             <div className="flex items-center gap-2 mb-3">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Common Keywords</h3>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-medium">
+              <h3 className="text-sm font-semibold" style={{ color: c.primary }}>Common Keywords</h3>
+              <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.25)', color: 'var(--accent)' }}>
                 {results.common_keywords.length}
               </span>
-              <span className="text-xs text-gray-400">appear in 2+ JDs</span>
+              <span className="text-xs" style={{ color: c.label }}>appear in 2+ JDs</span>
             </div>
             {results.common_keywords.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {results.common_keywords.map(kw => <Pill key={kw} text={kw} variant="blue" />)}
-              </div>
+              <div className="flex flex-wrap gap-2">{results.common_keywords.map(kw => <Pill key={kw} text={kw} variant="violet" isDark={isDark} />)}</div>
             ) : (
-              <p className="text-sm text-gray-400">No common keywords found.</p>
+              <p className="text-sm" style={{ color: c.label }}>No common keywords found.</p>
             )}
-          </Card>
+          </div>
 
-          {/* Overlap stats */}
-          <Card className="p-5">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Overlap Between JDs</h3>
+          <div style={{ ...CARD, padding: '20px' }}>
+            <h3 className="text-sm font-semibold mb-4" style={{ color: c.primary }}>Overlap Between JDs</h3>
             <div className="flex flex-col gap-3">
               {filledWithTitle.flatMap((a, ai) =>
                 filledWithTitle.slice(ai + 1).map((b, bi) => {
                   const overlapVal = results.overlap_matrix[ai][ai + 1 + bi]
-                  const labelA = a.title || `JD ${a.idx}`
-                  const labelB = b.title || `JD ${b.idx}`
-                  return (
-                    <OverlapBar
-                      key={`${ai}-${ai + 1 + bi}`}
-                      label={`${labelA} vs ${labelB}`}
-                      value={overlapVal}
-                    />
-                  )
+                  return <OverlapBar key={`${ai}-${ai + 1 + bi}`} label={`${a.title || `JD ${a.idx}`} vs ${b.title || `JD ${b.idx}`}`} value={overlapVal} isDark={isDark} />
                 })
               )}
             </div>
-          </Card>
+          </div>
 
-          {/* Unique per JD */}
-          <Card className="p-5">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Unique Keywords per JD</h3>
+          <div style={{ ...CARD, padding: '20px' }}>
+            <h3 className="text-sm font-semibold mb-4" style={{ color: c.primary }}>Unique Keywords per JD</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {results.unique_per_jd.map((kwList, i) => {
-                const label = filledWithTitle[i]?.title || `JD ${i + 1}`
-                return (
-                  <div key={i} className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
-                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">{label}</p>
-                    {kwList.length > 0 ? (
-                      <div className="flex flex-wrap gap-1.5">
-                        {kwList.map(kw => <Pill key={kw} text={kw} variant="gray" />)}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-gray-400">No unique keywords</p>
-                    )}
-                  </div>
-                )
-              })}
+              {results.unique_per_jd.map((kwList, i) => (
+                <div key={i} className="rounded-lg p-3" style={{ background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(124,58,237,0.04)' }}>
+                  <p className="text-xs font-semibold mb-2" style={{ color: c.label }}>{filledWithTitle[i]?.title || `JD ${i + 1}`}</p>
+                  {kwList.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">{kwList.map(kw => <Pill key={kw} text={kw} variant="gray" isDark={isDark} />)}</div>
+                  ) : (
+                    <p className="text-xs" style={{ color: c.label }}>No unique keywords</p>
+                  )}
+                </div>
+              ))}
             </div>
-          </Card>
+          </div>
         </div>
       )}
     </div>

@@ -6,28 +6,13 @@ import {
   Upload,
 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTheme } from '../context/ThemeContext'
 import { analyzeResume } from '../services/api'
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 function formatSize(bytes) {
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
   return (bytes / (1024 * 1024)).toFixed(2) + ' MB'
 }
-
-const GRADE_COLORS = {
-  A: 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400',
-  B: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400',
-  C: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400',
-  D: 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400',
-  F: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400',
-}
-
-// ---------------------------------------------------------------------------
-// Animated score counter
-// ---------------------------------------------------------------------------
 
 function useAnimatedScore(target) {
   const [display, setDisplay] = useState(0)
@@ -45,88 +30,144 @@ function useAnimatedScore(target) {
   return display
 }
 
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
+const cs = (isDark) => ({
+  background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.65)',
+  backdropFilter: 'blur(20px)',
+  WebkitBackdropFilter: 'blur(20px)',
+  border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(255,255,255,0.85)',
+  borderRadius: '16px',
+  boxShadow: isDark
+    ? '0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)'
+    : '0 8px 32px rgba(124,58,237,0.1), inset 0 1px 0 rgba(255,255,255,0.9)',
+})
 
-function Card({ children, className = '' }) {
+const is = (isDark) => ({
+  width: '100%',
+  background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.6)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+  border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(209,196,233,0.8)',
+  color: isDark ? '#f5f0ff' : '#1e1333',
+  borderRadius: '12px',
+  padding: '12px 16px',
+  fontSize: '14px',
+  outline: 'none',
+  resize: 'none',
+  transition: 'border-color 0.2s, box-shadow 0.2s',
+})
+
+const tc = (isDark) => ({
+  primary:   isDark ? '#f5f0ff' : '#1e1333',
+  secondary: isDark ? '#c4b5fd' : '#4c1d95',
+  label:     isDark ? '#a78bfa' : '#6d28d9',
+})
+
+function StyledInput({ isDark, style, ...props }) {
+  const [focused, setFocused] = useState(false)
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 ${className}`}>
-      {children}
-    </div>
+    <input
+      {...props}
+      style={{
+        ...is(isDark),
+        ...(focused ? { borderColor: 'var(--accent)', boxShadow: '0 0 0 3px var(--accent-glow)' } : {}),
+        ...style,
+      }}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+    />
   )
 }
 
-function CategoryBar({ label, value, color }) {
-  const colorMap = {
-    blue:   'bg-blue-500',
-    purple: 'bg-purple-500',
-    green:  'bg-green-500',
-    orange: 'bg-orange-500',
-  }
+function StyledTextarea({ isDark, style, ...props }) {
+  const [focused, setFocused] = useState(false)
+  return (
+    <textarea
+      {...props}
+      style={{
+        ...is(isDark),
+        ...(focused ? { borderColor: 'var(--accent)', boxShadow: '0 0 0 3px var(--accent-glow)' } : {}),
+        ...style,
+      }}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+    />
+  )
+}
+
+function CategoryBar({ label, value, isDark }) {
+  const c = tc(isDark)
   const pct = Math.round(value * 100)
   return (
     <div>
       <div className="flex justify-between text-xs mb-1">
-        <span className="text-gray-600 dark:text-gray-400">{label}</span>
-        <span className="font-medium text-gray-800 dark:text-gray-200">{pct}%</span>
+        <span style={{ color: c.secondary }}>{label}</span>
+        <span style={{ color: c.primary, fontFamily: "'JetBrains Mono', monospace" }}>{pct}%</span>
       </div>
-      <div className="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+      <div className="h-2 rounded-full" style={{ background: isDark ? 'rgba(139,92,246,0.2)' : 'rgba(124,58,237,0.15)' }}>
         <div
-          className={`h-2 rounded-full ${colorMap[color]} transition-all duration-700`}
-          style={{ width: `${pct}%` }}
+          className="h-2 rounded-full transition-all duration-700"
+          style={{ width: `${pct}%`, background: 'linear-gradient(90deg, #7c3aed, #a78bfa)' }}
         />
       </div>
     </div>
   )
 }
 
-function KeywordPill({ text, variant }) {
+function KeywordPill({ text, variant, isDark }) {
   const styles = {
-    missing: 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-500/20',
-    matched: 'bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-500/20',
-    partial: 'bg-yellow-50 dark:bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-500/20',
+    missing: { background: 'rgba(239,68,68,0.1)',   color: isDark ? '#fca5a5' : '#dc2626', border: '1px solid rgba(239,68,68,0.3)' },
+    matched: { background: isDark ? 'rgba(167,139,250,0.1)' : 'rgba(124,58,237,0.1)', color: isDark ? '#c4b5fd' : '#6d28d9', border: `1px solid ${isDark ? 'rgba(167,139,250,0.3)' : 'rgba(124,58,237,0.25)'}` },
+    partial: { background: 'rgba(251,191,36,0.1)',  color: isDark ? '#fde68a' : '#b45309', border: '1px solid rgba(251,191,36,0.3)' },
   }
   return (
-    <span className={`inline-block text-xs px-2 py-1 rounded-full ${styles[variant]}`}>
+    <span
+      className="inline-block text-xs px-2 py-1 rounded-full"
+      style={{ backdropFilter: 'blur(10px)', ...styles[variant] }}
+    >
       {variant === 'matched' ? `✓ ${text}` : text}
     </span>
   )
 }
 
-function MissingTab({ missing }) {
+function MissingTab({ missing, isDark }) {
+  const c = tc(isDark)
   const high   = missing.filter(k => k.priority === 'high')
   const medium = missing.filter(k => k.priority === 'medium')
   const low    = missing.filter(k => k.priority === 'low')
 
-  const Section = ({ dot, label, items }) =>
+  const Section = ({ dotColor, glowColor, label, items }) =>
     items.length === 0 ? null : (
       <div>
         <div className="flex items-center gap-1.5 mb-2">
-          <span className={`w-2 h-2 rounded-full ${dot}`} />
-          <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{label}</span>
+          <span className="w-2 h-2 rounded-full" style={{ background: dotColor, boxShadow: `0 0 6px ${glowColor}` }} />
+          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: c.label }}>
+            {label}
+          </span>
         </div>
         <div className="flex flex-wrap gap-2">
-          {items.map(k => <KeywordPill key={k.keyword} text={k.keyword} variant="missing" />)}
+          {items.map(k => <KeywordPill key={k.keyword} text={k.keyword} variant="missing" isDark={isDark} />)}
         </div>
       </div>
     )
 
   return (
     <div className="flex flex-col gap-4">
-      <Section dot="bg-red-500"    label="High Priority" items={high} />
-      <Section dot="bg-yellow-500" label="Medium"        items={medium} />
-      <Section dot="bg-gray-400"   label="Low"           items={low} />
+      <Section dotColor="#ef4444" glowColor="rgba(239,68,68,0.5)"   label="High Priority" items={high} />
+      <Section dotColor="#eab308" glowColor="rgba(234,179,8,0.5)"   label="Medium"        items={medium} />
+      <Section dotColor="#6b7280" glowColor="rgba(107,114,128,0.5)" label="Low"           items={low} />
       {missing.length === 0 && (
-        <p className="text-sm text-gray-400 text-center py-4">No missing keywords — great match!</p>
+        <p className="text-sm text-center py-4" style={{ color: c.label }}>
+          No missing keywords — great match!
+        </p>
       )}
     </div>
   )
 }
 
-function KeywordAnalysisCard({ keyword_analysis }) {
+function KeywordAnalysisCard({ keyword_analysis, isDark }) {
   const [tab, setTab] = useState('missing')
   const { matched, missing, partial } = keyword_analysis
+  const c = tc(isDark)
 
   const tabs = [
     { id: 'missing', label: `Missing (${missing.length})` },
@@ -135,64 +176,59 @@ function KeywordAnalysisCard({ keyword_analysis }) {
   ]
 
   return (
-    <Card className="p-6">
-      <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Keyword Analysis</h3>
-      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4 gap-4">
+    <div style={{ ...cs(isDark), padding: '24px' }}>
+      <h3 className="text-sm font-semibold mb-4" style={{ color: c.primary }}>Keyword Analysis</h3>
+      <div className="flex mb-4 gap-4" style={{ borderBottom: `1px solid ${isDark ? 'rgba(139,92,246,0.2)' : 'rgba(124,58,237,0.15)'}` }}>
         {tabs.map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`text-sm pb-2 border-b-2 transition-colors ${
-              tab === t.id
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-            }`}
+            className="text-sm pb-2 transition-colors"
+            style={{
+              borderBottom: tab === t.id ? '2px solid var(--accent)' : '2px solid transparent',
+              color: tab === t.id ? 'var(--accent)' : c.label,
+            }}
           >
             {t.label}
           </button>
         ))}
       </div>
 
-      {tab === 'missing' && <MissingTab missing={missing} />}
-
+      {tab === 'missing' && <MissingTab missing={missing} isDark={isDark} />}
       {tab === 'matched' && (
         <div className="flex flex-wrap gap-2">
-          {matched.map(k => <KeywordPill key={k.keyword} text={k.keyword} variant="matched" />)}
-          {matched.length === 0 && <p className="text-sm text-gray-400">No exact matches found.</p>}
+          {matched.map(k => <KeywordPill key={k.keyword} text={k.keyword} variant="matched" isDark={isDark} />)}
+          {matched.length === 0 && <p className="text-sm" style={{ color: c.label }}>No exact matches found.</p>}
         </div>
       )}
-
       {tab === 'partial' && (
         <div className="flex flex-wrap gap-2">
           {partial.map(k => (
-            <KeywordPill key={k.keyword} text={`${k.keyword} (${k.resume_match})`} variant="partial" />
+            <KeywordPill key={k.keyword} text={`${k.keyword} (${k.resume_match})`} variant="partial" isDark={isDark} />
           ))}
-          {partial.length === 0 && <p className="text-sm text-gray-400">No partial matches.</p>}
+          {partial.length === 0 && <p className="text-sm" style={{ color: c.label }}>No partial matches.</p>}
         </div>
       )}
-    </Card>
-  )
-}
-
-function StatMini({ label, value, color }) {
-  const colorMap = {
-    blue:   'text-blue-600 dark:text-blue-400',
-    purple: 'text-purple-600 dark:text-purple-400',
-    green:  'text-green-600 dark:text-green-400',
-  }
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 text-center">
-      <div className={`text-2xl font-bold ${colorMap[color]}`}>{value}</div>
-      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{label}</div>
     </div>
   )
 }
 
-// ---------------------------------------------------------------------------
-// Main page
-// ---------------------------------------------------------------------------
+function StatMini({ label, value, isDark }) {
+  return (
+    <div style={{ ...cs(isDark), padding: '16px', textAlign: 'center' }}>
+      <div className="text-2xl font-bold" style={{ color: 'var(--accent)', fontFamily: "'JetBrains Mono', monospace" }}>
+        {value}
+      </div>
+      <div className="text-xs mt-1" style={{ color: tc(isDark).label }}>{label}</div>
+    </div>
+  )
+}
 
 export default function Analyzer() {
+  const { isDark } = useTheme()
+  const c = tc(isDark)
+  const CARD = cs(isDark)
+
   const [resumeFile, setResumeFile] = useState(null)
   const [jdText, setJdText]         = useState('')
   const [isLoading, setIsLoading]   = useState(false)
@@ -249,25 +285,22 @@ export default function Analyzer() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">Resume Analyzer</h1>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+      <h1 className="text-2xl font-bold mb-1" style={{ color: c.primary }}>Resume Analyzer</h1>
+      <p className="text-sm mb-6" style={{ color: c.label }}>
         Upload your resume and paste a job description to get your ATS score.
       </p>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* ---- LEFT COLUMN ---- */}
+        {/* LEFT */}
         <div className="flex flex-col gap-4">
-
-          {/* Resume upload */}
-          <Card className="p-6">
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Resume</p>
+          <div style={{ ...CARD, padding: '24px' }}>
+            <p className="text-sm font-medium mb-3" style={{ color: c.secondary }}>Resume</p>
             <div
-              className={[
-                'border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors',
-                dragOver
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10'
-                  : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-500/5',
-              ].join(' ')}
+              className="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all"
+              style={{
+                borderColor: dragOver ? 'var(--accent)' : (isDark ? 'rgba(139,92,246,0.3)' : 'rgba(124,58,237,0.25)'),
+                background: dragOver ? 'rgba(124,58,237,0.08)' : 'transparent',
+              }}
               onClick={() => fileInputRef.current?.click()}
               onDragOver={onDragOver}
               onDragLeave={onDragLeave}
@@ -282,115 +315,111 @@ export default function Analyzer() {
               />
               {resumeFile ? (
                 <div className="flex flex-col items-center gap-2">
-                  <FileText size={32} className="text-green-500" />
-                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200 break-all">{resumeFile.name}</p>
-                  <p className="text-xs text-gray-400">{formatSize(resumeFile.size)}</p>
+                  <FileText size={32} style={{ color: 'var(--accent)' }} />
+                  <p className="text-sm font-medium break-all" style={{ color: c.primary }}>{resumeFile.name}</p>
+                  <p className="text-xs" style={{ color: c.label }}>{formatSize(resumeFile.size)}</p>
                   <button
-                    className="text-xs text-blue-500 hover:text-blue-600 mt-1"
+                    className="text-xs mt-1"
+                    style={{ color: 'var(--accent)' }}
                     onClick={e => { e.stopPropagation(); setResumeFile(null); fileInputRef.current.value = '' }}
                   >
                     Change file
                   </button>
                 </div>
               ) : (
-                <div className="flex flex-col items-center gap-2 text-gray-400">
+                <div className="flex flex-col items-center gap-2" style={{ color: c.label }}>
                   <Upload size={32} />
                   <p className="text-sm font-medium">Drop your resume here</p>
                   <p className="text-xs">PDF, DOCX, or TXT</p>
                 </div>
               )}
             </div>
-          </Card>
+          </div>
 
-          {/* JD textarea */}
-          <Card className="p-6">
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Job Description</p>
-            <textarea
+          <div style={{ ...CARD, padding: '24px' }}>
+            <p className="text-sm font-medium mb-3" style={{ color: c.secondary }}>Job Description</p>
+            <StyledTextarea
+              isDark={isDark}
               value={jdText}
               onChange={e => setJdText(e.target.value)}
               placeholder="Paste the job description here..."
-              className="w-full min-h-48 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 resize-none text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-colors"
+              style={{ minHeight: '192px' }}
             />
-            <p className="text-xs text-gray-400 text-right mt-1">{jdText.length} chars</p>
-          </Card>
+            <p className="text-xs text-right mt-1" style={{ color: c.label }}>{jdText.length} chars</p>
+          </div>
 
-          {/* Analyze button */}
           <div>
             <button
               onClick={handleSubmit}
               disabled={!canSubmit}
-              className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium flex items-center justify-center gap-2 transition-colors"
+              className="w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                color: 'white',
+                border: '1px solid rgba(167,139,250,0.3)',
+                boxShadow: '0 4px 24px rgba(124,58,237,0.4)',
+              }}
             >
               {isLoading
                 ? <><Loader2 size={16} className="animate-spin" /> Analyzing...</>
                 : <><Search size={16} /> Analyze Resume</>
               }
             </button>
-            <p className="text-xs text-gray-400 text-center mt-2">Press Ctrl+Enter to analyze</p>
+            <p className="text-xs text-center mt-2" style={{ color: c.label }}>Press Ctrl+Enter to analyze</p>
           </div>
 
-          {/* Error */}
           {error && (
-            <div className="rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 p-4 text-sm text-red-700 dark:text-red-400">
+            <div className="rounded-xl p-4 text-sm" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: isDark ? '#fca5a5' : '#dc2626' }}>
               {error}
             </div>
           )}
         </div>
 
-        {/* ---- RIGHT COLUMN ---- */}
+        {/* RIGHT */}
         <div className="flex flex-col gap-4">
           {results == null ? (
             <div className="flex flex-col items-center justify-center h-full min-h-64 text-center gap-3">
-              <BarChart2 size={48} className="text-gray-300 dark:text-gray-600" />
-              <p className="text-gray-400 font-medium">Your analysis will appear here</p>
-              <p className="text-sm text-gray-400">Upload a resume and paste a job description to get started</p>
+              <BarChart2 size={48} style={{ color: isDark ? 'rgba(139,92,246,0.3)' : 'rgba(124,58,237,0.25)' }} />
+              <p className="font-medium" style={{ color: c.label }}>Your analysis will appear here</p>
+              <p className="text-sm" style={{ color: c.label }}>Upload a resume and paste a job description to get started</p>
             </div>
           ) : (
             <>
-              {/* ATS Score card */}
-              <Card className="p-6">
+              <div style={{ ...CARD, padding: '24px' }}>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">ATS Score</h3>
-                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${GRADE_COLORS[results.ats_score.grade]}`}>
+                  <h3 className="text-sm font-semibold" style={{ color: c.primary }}>ATS Score</h3>
+                  <span
+                    className="text-xs font-bold px-2.5 py-1 rounded-full"
+                    style={{
+                      background: isDark ? 'rgba(139,92,246,0.15)' : 'rgba(124,58,237,0.1)',
+                      border: isDark ? '1px solid rgba(139,92,246,0.3)' : '1px solid rgba(124,58,237,0.25)',
+                      color: 'var(--accent)',
+                    }}
+                  >
                     {results.ats_score.grade}
                   </span>
                 </div>
-
                 <div className="flex items-end gap-1 mb-2">
-                  <span className="text-6xl font-bold text-gray-900 dark:text-white leading-none">{animatedScore}</span>
-                  <span className="text-2xl text-gray-400 mb-1">/100</span>
+                  <span className="text-6xl font-bold leading-none" style={{ color: 'var(--accent)', fontFamily: "'JetBrains Mono', monospace" }}>
+                    {animatedScore}
+                  </span>
+                  <span className="text-2xl mb-1" style={{ color: c.label }}>/100</span>
                 </div>
-
-                <p className="text-sm italic text-gray-600 dark:text-gray-400 mb-5">{results.ats_score.feedback}</p>
-
+                <p className="text-sm italic mb-5" style={{ color: c.secondary }}>{results.ats_score.feedback}</p>
                 <div className="flex flex-col gap-3">
-                  <CategoryBar label="Technical"  value={results.ats_score.technical_score}  color="blue" />
-                  <CategoryBar label="Skills"     value={results.ats_score.skills_score}     color="purple" />
-                  <CategoryBar label="Experience" value={results.ats_score.experience_score} color="green" />
-                  <CategoryBar label="Education"  value={results.ats_score.education_score}  color="orange" />
+                  <CategoryBar label="Technical"  value={results.ats_score.technical_score}  isDark={isDark} />
+                  <CategoryBar label="Skills"     value={results.ats_score.skills_score}     isDark={isDark} />
+                  <CategoryBar label="Experience" value={results.ats_score.experience_score} isDark={isDark} />
+                  <CategoryBar label="Education"  value={results.ats_score.education_score}  isDark={isDark} />
                 </div>
-              </Card>
+              </div>
 
-              {/* Keyword Analysis card */}
-              <KeywordAnalysisCard keyword_analysis={results.keyword_analysis} />
+              <KeywordAnalysisCard keyword_analysis={results.keyword_analysis} isDark={isDark} />
 
-              {/* Summary stats */}
               <div className="grid grid-cols-3 gap-3">
-                <StatMini
-                  label="Match Rate"
-                  value={`${Math.round(results.keyword_analysis.match_rate * 100)}%`}
-                  color="blue"
-                />
-                <StatMini
-                  label="Keywords Found"
-                  value={`${results.ats_score.matched_count}/${results.ats_score.total_keywords}`}
-                  color="purple"
-                />
-                <StatMini
-                  label="Word Count"
-                  value={results.resume_data.word_count}
-                  color="green"
-                />
+                <StatMini isDark={isDark} label="Match Rate"     value={`${Math.round(results.keyword_analysis.match_rate * 100)}%`} />
+                <StatMini isDark={isDark} label="Keywords Found" value={`${results.ats_score.matched_count}/${results.ats_score.total_keywords}`} />
+                <StatMini isDark={isDark} label="Word Count"     value={results.resume_data.word_count} />
               </div>
             </>
           )}

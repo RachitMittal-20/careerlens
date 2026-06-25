@@ -1,4 +1,30 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
+
+:root {
+  --accent: #7c3aed;
+  --accent-secondary: #8b5cf6;
+  --accent-glow: rgba(124,58,237,0.25);
+  --text-primary: #1e1333;
+  --text-secondary: #4c1d95;
+  --text-muted: #7c3aed;
+  --glass-bg: rgba(255,255,255,0.55);
+  --glass-border: rgba(255,255,255,0.75);
+  --glass-shadow: 0 8px 32px rgba(124,58,237,0.12);
+}
+
+.dark {
+  --accent: #a78bfa;
+  --accent-secondary: #c4b5fd;
+  --accent-glow: rgba(167,139,250,0.25);
+  --text-primary: #f5f0ff;
+  --text-secondary: #c4b5fd;
+  --text-muted: #a78bfa;
+  --glass-bg: rgba(255,255,255,0.05);
+  --glass-bg-hover: rgba(255,255,255,0.08);
+  --glass-border: rgba(255,255,255,0.1);
+  --glass-shadow: 0 8px 32px rgba(0,0,0,0.6);
+}
 
 @layer base {
   html {
@@ -6,27 +32,65 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  html, body, #root {
+    background: transparent !important;
+    min-height: 100vh;
+  }
+
+  * {
+    font-family: 'Inter', sans-serif;
+  }
+
   body {
     margin: 0;
+    color: var(--text-primary);
   }
 
   #root {
-    height: 100vh;
     display: flex;
   }
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+@keyframes orb-float-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(40px, -40px) scale(1.05); }
+  66% { transform: translate(-20px, 20px) scale(0.97); }
+}
+
+@keyframes orb-float-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  40% { transform: translate(-50px, 30px) scale(1.08); }
+  70% { transform: translate(30px, -20px) scale(0.95); }
+}
+
+@keyframes orb-float-3 {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.1); }
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.glass-hover:hover {
+  background: var(--glass-bg-hover);
+  transition: background 0.2s ease;
 }
 
 .page-fade {
-  animation: fadeIn 0.25s ease both;
+  animation: fadeSlideIn 0.3s ease forwards;
 }

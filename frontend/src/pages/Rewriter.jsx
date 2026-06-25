@@ -1,24 +1,85 @@
 import { Loader2, Plus, Trash2, Wand2 } from 'lucide-react'
 import { useState } from 'react'
+import { useTheme } from '../context/ThemeContext'
 import { rewriteBullets } from '../services/api'
 
-function Card({ children, className = '' }) {
+const cs = (isDark) => ({
+  background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.65)',
+  backdropFilter: 'blur(20px)',
+  WebkitBackdropFilter: 'blur(20px)',
+  border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(255,255,255,0.85)',
+  borderRadius: '16px',
+  boxShadow: isDark
+    ? '0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)'
+    : '0 8px 32px rgba(124,58,237,0.1), inset 0 1px 0 rgba(255,255,255,0.9)',
+})
+
+const is = (isDark) => ({
+  width: '100%',
+  background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.6)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+  border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(209,196,233,0.8)',
+  color: isDark ? '#f5f0ff' : '#1e1333',
+  borderRadius: '8px',
+  padding: '8px 12px',
+  fontSize: '14px',
+  outline: 'none',
+  resize: 'none',
+  transition: 'border-color 0.2s, box-shadow 0.2s',
+})
+
+const tc = (isDark) => ({
+  primary:   isDark ? '#f5f0ff' : '#1e1333',
+  secondary: isDark ? '#c4b5fd' : '#4c1d95',
+  label:     isDark ? '#a78bfa' : '#6d28d9',
+})
+
+function StyledInput({ isDark, style, ...props }) {
+  const [focused, setFocused] = useState(false)
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 ${className}`}>
-      {children}
-    </div>
+    <input
+      {...props}
+      style={{
+        ...is(isDark),
+        ...(focused ? { borderColor: 'var(--accent)', boxShadow: '0 0 0 3px var(--accent-glow)' } : {}),
+        ...style,
+      }}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+    />
+  )
+}
+
+function StyledTextarea({ isDark, style, ...props }) {
+  const [focused, setFocused] = useState(false)
+  return (
+    <textarea
+      {...props}
+      style={{
+        ...is(isDark),
+        ...(focused ? { borderColor: 'var(--accent)', boxShadow: '0 0 0 3px var(--accent-glow)' } : {}),
+        ...style,
+      }}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+    />
   )
 }
 
 export default function Rewriter() {
-  const [bullets, setBullets]     = useState(['', '', ''])
-  const [roleTitle, setRoleTitle] = useState('')
+  const { isDark } = useTheme()
+  const c = tc(isDark)
+  const CARD = cs(isDark)
+
+  const [bullets, setBullets]       = useState(['', '', ''])
+  const [roleTitle, setRoleTitle]   = useState('')
   const [jdKeywords, setJdKeywords] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [rewrites, setRewrites]   = useState([])
-  const [accepted, setAccepted]   = useState(new Set())
-  const [error, setError]         = useState(null)
-  const [copied, setCopied]       = useState(false)
+  const [isLoading, setIsLoading]   = useState(false)
+  const [rewrites, setRewrites]     = useState([])
+  const [accepted, setAccepted]     = useState(new Set())
+  const [error, setError]           = useState(null)
+  const [copied, setCopied]         = useState(false)
 
   const updateBullet = (i, val) =>
     setBullets(prev => prev.map((b, idx) => (idx === i ? val : b)))
@@ -69,58 +130,64 @@ export default function Rewriter() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">Bullet Point Rewriter</h1>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+      <h1 className="text-2xl font-bold mb-1" style={{ color: c.primary }}>Bullet Point Rewriter</h1>
+      <p className="text-sm mb-6" style={{ color: c.label }}>
         Paste weak bullet points, get AI-powered rewrites with JD keywords embedded.
       </p>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* LEFT — inputs */}
+        {/* LEFT */}
         <div className="flex flex-col gap-4">
-          <Card className="p-6">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Job Context</h3>
+          <div style={{ ...CARD, padding: '24px' }}>
+            <h3 className="text-sm font-semibold mb-4" style={{ color: c.primary }}>Job Context</h3>
             <div className="flex flex-col gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 block">Job Title</label>
-                <input
+                <label className="text-xs font-medium mb-1 block" style={{ color: c.secondary }}>Job Title</label>
+                <StyledInput
+                  isDark={isDark}
                   value={roleTitle}
                   onChange={e => setRoleTitle(e.target.value)}
                   placeholder="e.g. Software Engineer, Data Scientist"
-                  className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-colors"
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 block">Job Keywords</label>
-                <textarea
+                <label className="text-xs font-medium mb-1 block" style={{ color: c.secondary }}>Job Keywords</label>
+                <StyledTextarea
+                  isDark={isDark}
                   rows={3}
                   value={jdKeywords}
                   onChange={e => setJdKeywords(e.target.value)}
                   placeholder="Paste keywords comma-separated, e.g. Python, FastAPI, Docker, AWS"
-                  className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none transition-colors"
                 />
               </div>
             </div>
-          </Card>
+          </div>
 
-          <Card className="p-6">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">
+          <div style={{ ...CARD, padding: '24px' }}>
+            <h3 className="text-sm font-semibold mb-4" style={{ color: c.primary }}>
               Your Bullet Points
-              <span className="ml-2 text-xs font-normal text-gray-400">({bullets.length}/8)</span>
+              <span className="ml-2 text-xs font-normal" style={{ color: c.label }}>({bullets.length}/8)</span>
             </h3>
             <div className="flex flex-col gap-3">
               {bullets.map((b, i) => (
                 <div key={i} className="flex items-start gap-2">
-                  <span className="mt-2.5 text-xs font-bold text-gray-400 w-5 text-right shrink-0">{i + 1}</span>
-                  <textarea
+                  <span className="mt-2.5 text-xs font-bold w-5 text-right shrink-0" style={{ color: c.label }}>
+                    {i + 1}
+                  </span>
+                  <StyledTextarea
+                    isDark={isDark}
                     rows={2}
                     value={b}
                     onChange={e => updateBullet(i, e.target.value)}
                     placeholder="e.g. Worked on backend APIs for the product team"
-                    className="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3 text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none transition-colors"
+                    style={{ flex: 1 }}
                   />
                   <button
                     onClick={() => removeBullet(i)}
-                    className="mt-2 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
+                    className="mt-2 p-1.5 rounded-lg transition-colors"
+                    style={{ color: c.label }}
+                    onMouseOver={e => e.currentTarget.style.color = '#dc2626'}
+                    onMouseOut={e => e.currentTarget.style.color = c.label}
                   >
                     <Trash2 size={14} />
                   </button>
@@ -131,17 +198,24 @@ export default function Rewriter() {
             {bullets.length < 8 && (
               <button
                 onClick={addBullet}
-                className="mt-3 w-full border border-dashed border-gray-300 dark:border-gray-600 rounded-lg py-2 text-sm text-gray-500 dark:text-gray-400 hover:border-blue-400 hover:text-blue-500 flex items-center justify-center gap-2 transition-colors"
+                className="mt-3 w-full rounded-lg py-2 text-sm flex items-center justify-center gap-2 transition-all"
+                style={{ border: '1px dashed rgba(124,58,237,0.3)', color: c.label, background: 'transparent' }}
               >
                 <Plus size={14} /> Add Bullet Point
               </button>
             )}
-          </Card>
+          </div>
 
           <button
             onClick={handleRewrite}
             disabled={!canSubmit}
-            className="w-full py-3 rounded-xl bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium flex items-center justify-center gap-2 transition-all"
+            className="w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+              color: 'white',
+              border: '1px solid rgba(167,139,250,0.3)',
+              boxShadow: '0 4px 24px rgba(124,58,237,0.4)',
+            }}
           >
             {isLoading
               ? <><Loader2 size={16} className="animate-spin" /> Rewriting...</>
@@ -150,31 +224,34 @@ export default function Rewriter() {
           </button>
 
           {error && (
-            <div className="rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 p-4 text-sm text-red-700 dark:text-red-400">
+            <div className="rounded-xl p-4 text-sm" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: isDark ? '#fca5a5' : '#dc2626' }}>
               {error}
             </div>
           )}
         </div>
 
-        {/* RIGHT — results */}
+        {/* RIGHT */}
         <div className="flex flex-col gap-4">
           {rewrites.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full min-h-64 text-center gap-3">
-              <Wand2 size={48} className="text-gray-300 dark:text-gray-600" />
-              <p className="text-gray-400 font-medium">Rewrites will appear here</p>
-              <p className="text-sm text-gray-400">Fill in your bullets and click Rewrite All</p>
+              <Wand2 size={48} style={{ color: isDark ? 'rgba(139,92,246,0.3)' : 'rgba(124,58,237,0.25)' }} />
+              <p className="font-medium" style={{ color: c.label }}>Rewrites will appear here</p>
+              <p className="text-sm" style={{ color: c.label }}>Fill in your bullets and click Rewrite All</p>
             </div>
           ) : (
             <>
               <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  <span className="font-semibold text-gray-700 dark:text-gray-300">{accepted.size}</span> of{' '}
-                  <span className="font-semibold text-gray-700 dark:text-gray-300">{rewrites.length}</span> bullets accepted
+                <p className="text-sm" style={{ color: c.label }}>
+                  <span className="font-semibold" style={{ color: c.primary }}>{accepted.size}</span>
+                  {' '}of{' '}
+                  <span className="font-semibold" style={{ color: c.primary }}>{rewrites.length}</span>
+                  {' '}bullets accepted
                 </p>
                 {accepted.size > 0 && (
                   <button
                     onClick={copyAccepted}
-                    className="text-xs px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors"
+                    className="text-xs px-3 py-1.5 rounded-lg transition-colors"
+                    style={{ background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.25)', color: 'var(--accent)' }}
                   >
                     {copied ? '✓ Copied!' : 'Copy Accepted Bullets'}
                   </button>
@@ -183,53 +260,68 @@ export default function Rewriter() {
 
               {rewrites.map((r, i) => {
                 const isAccepted = accepted.has(i)
+                const cardBase = cs(isDark)
                 return (
                   <div
                     key={i}
-                    className={`bg-white dark:bg-gray-800 rounded-xl border-2 transition-colors ${
-                      isAccepted
-                        ? 'border-green-400 dark:border-green-500/60'
-                        : 'border-gray-200 dark:border-gray-700'
-                    }`}
+                    style={{
+                      ...cardBase,
+                      border: isAccepted
+                        ? (isDark ? '2px solid rgba(167,139,250,0.5)' : '2px solid rgba(124,58,237,0.4)')
+                        : cardBase.border,
+                    }}
                   >
                     <div className="flex items-center justify-between px-4 pt-4 pb-2">
-                      <span className="text-xs font-bold text-gray-500 dark:text-gray-400">BULLET #{i + 1}</span>
+                      <span className="text-xs font-bold" style={{ color: c.label, fontFamily: "'JetBrains Mono', monospace" }}>
+                        BULLET #{i + 1}
+                      </span>
                       {isAccepted && (
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400">
+                        <span
+                          className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                          style={{ background: isDark ? 'rgba(167,139,250,0.15)' : 'rgba(124,58,237,0.1)', color: isDark ? '#c4b5fd' : '#6d28d9', border: '1px solid rgba(124,58,237,0.25)' }}
+                        >
                           ✓ Accepted
                         </span>
                       )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 px-4 pb-3">
-                      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
-                        <p className="text-xs font-semibold text-gray-400 mb-1.5">Original</p>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{r.original}</p>
+                      <div className="rounded-lg p-3" style={{ background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(124,58,237,0.04)' }}>
+                        <p className="text-xs font-semibold mb-1.5" style={{ color: c.label }}>Original</p>
+                        <p className="text-xs leading-relaxed" style={{ color: c.secondary }}>{r.original}</p>
                       </div>
-                      <div className={`rounded-lg p-3 ${isAccepted ? 'bg-green-50 dark:bg-green-500/10' : 'bg-blue-50 dark:bg-blue-500/10'}`}>
-                        <p className="text-xs font-semibold text-gray-400 mb-1.5">Rewritten</p>
-                        <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">{r.rewritten}</p>
+                      <div
+                        className="rounded-lg p-3"
+                        style={{ background: isAccepted ? 'rgba(124,58,237,0.1)' : 'rgba(124,58,237,0.06)' }}
+                      >
+                        <p className="text-xs font-semibold mb-1.5" style={{ color: c.label }}>Rewritten</p>
+                        <p className="text-xs leading-relaxed" style={{ color: c.primary }}>{r.rewritten}</p>
                       </div>
                     </div>
 
                     {r.keywords_added?.length > 0 && (
                       <div className="px-4 pb-3 flex flex-wrap gap-1.5">
                         {r.keywords_added.map(kw => (
-                          <span key={kw} className="text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400">
+                          <span
+                            key={kw}
+                            className="text-xs px-2 py-0.5 rounded-full"
+                            style={{ background: isDark ? 'rgba(167,139,250,0.1)' : 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.25)', color: isDark ? '#c4b5fd' : '#6d28d9' }}
+                          >
                             +{kw}
                           </span>
                         ))}
                       </div>
                     )}
 
-                    <div className="border-t border-gray-100 dark:border-gray-700 px-4 py-2.5 flex gap-2">
+                    <div className="px-4 py-2.5 flex gap-2" style={{ borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(124,58,237,0.12)'}` }}>
                       <button
                         onClick={() => toggleAccepted(i)}
-                        className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${
-                          isAccepted
-                            ? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                            : 'bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-500/30'
-                        }`}
+                        className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all"
+                        style={{
+                          background: isAccepted ? (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)') : 'rgba(124,58,237,0.1)',
+                          color: isAccepted ? c.label : (isDark ? '#c4b5fd' : '#6d28d9'),
+                          border: isAccepted ? `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}` : '1px solid rgba(124,58,237,0.25)',
+                        }}
                       >
                         {isAccepted ? '✗ Undo' : '✓ Accept'}
                       </button>
@@ -241,7 +333,8 @@ export default function Rewriter() {
               {accepted.size > 0 && (
                 <button
                   onClick={copyAccepted}
-                  className="w-full py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  className="w-full py-2.5 rounded-xl text-sm transition-colors"
+                  style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.65)', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(255,255,255,0.85)', color: c.secondary }}
                 >
                   {copied ? '✓ Copied!' : 'Copy Accepted Bullets'}
                 </button>
