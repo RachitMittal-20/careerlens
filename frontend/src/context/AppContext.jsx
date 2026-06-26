@@ -24,6 +24,13 @@ export function AppProvider({ children }) {
     } catch { return null }
   })
 
+  const [acceptedBullets, setAcceptedBulletsState] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('careerlens-accepted-bullets')
+      return saved ? JSON.parse(saved) : []
+    } catch { return [] }
+  })
+
   const setAnalyzerResults = (data) => {
     setAnalyzerResultsState(data)
     try { sessionStorage.setItem('careerlens-analyzer', JSON.stringify(data)) } catch {}
@@ -39,14 +46,21 @@ export function AppProvider({ children }) {
     try { sessionStorage.setItem('careerlens-compare', JSON.stringify(data)) } catch {}
   }
 
+  const setAcceptedBullets = (data) => {
+    setAcceptedBulletsState(data)
+    try { sessionStorage.setItem('careerlens-accepted-bullets', JSON.stringify(data)) } catch {}
+  }
+
   const clearAll = () => {
     setAnalyzerResultsState(null)
     setRewriteResultsState(null)
     setCompareResultsState(null)
+    setAcceptedBulletsState([])
     sessionStorage.removeItem('careerlens-analyzer')
     sessionStorage.removeItem('careerlens-rewriter')
     sessionStorage.removeItem('careerlens-compare')
     sessionStorage.removeItem('careerlens-rewriter-inputs')
+    sessionStorage.removeItem('careerlens-accepted-bullets')
   }
 
   return (
@@ -54,6 +68,7 @@ export function AppProvider({ children }) {
       analyzerResults, setAnalyzerResults,
       rewriteResults, setRewriteResults,
       compareResults, setCompareResults,
+      acceptedBullets, setAcceptedBullets,
       clearAll,
     }}>
       {children}

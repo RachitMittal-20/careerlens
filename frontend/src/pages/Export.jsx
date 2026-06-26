@@ -1,5 +1,6 @@
-import { CheckCircle, Download, Info, Loader2 } from 'lucide-react'
+import { CheckCircle, Download, Info, Loader2, X } from 'lucide-react'
 import { useState } from 'react'
+import { useApp } from '../context/AppContext'
 import { useTheme } from '../context/ThemeContext'
 import { exportPDF } from '../services/api'
 
@@ -72,6 +73,7 @@ const ATS_TIPS = [
 
 export default function Export() {
   const { isDark } = useTheme()
+  const { acceptedBullets, setAcceptedBullets } = useApp()
   const c = tc(isDark)
   const CARD = cs(isDark)
 
@@ -94,7 +96,7 @@ export default function Export() {
         word_count: wordCount,
         filename: `${filename}.txt`,
       }
-      const response = await exportPDF(resumeData, [], filename)
+      const response = await exportPDF(resumeData, acceptedBullets, filename)
       const url = URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }))
       const a = document.createElement('a')
       a.href = url
@@ -116,6 +118,27 @@ export default function Export() {
       <p className="text-sm mb-6" style={{ color: c.label }}>
         Generate an ATS-friendly PDF from your resume text.
       </p>
+
+      {acceptedBullets.length > 0 && (
+        <div
+          className="flex items-center justify-between px-5 py-3.5 rounded-xl mb-6"
+          style={{
+            background: isDark ? 'rgba(124,58,237,0.1)' : 'rgba(124,58,237,0.07)',
+            border: isDark ? '1px solid rgba(167,139,250,0.3)' : '1px solid rgba(124,58,237,0.25)',
+          }}
+        >
+          <span className="text-sm font-medium" style={{ color: isDark ? '#c4b5fd' : '#6d28d9' }}>
+            ✓ {acceptedBullets.length} optimized bullet{acceptedBullets.length !== 1 ? 's' : ''} from Rewriter will be included in your PDF
+          </span>
+          <button
+            onClick={() => setAcceptedBullets([])}
+            className="ml-4 flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-all shrink-0"
+            style={{ color: c.label, background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)' }}
+          >
+            <X size={11} /> Clear
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* LEFT */}

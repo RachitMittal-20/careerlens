@@ -1,5 +1,6 @@
-import { Loader2, Plus, Trash2, Wand2 } from 'lucide-react'
+import { ArrowRight, Loader2, Plus, Trash2, Wand2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { useTheme } from '../context/ThemeContext'
 import { rewriteBullets } from '../services/api'
@@ -77,7 +78,8 @@ function StyledTextarea({ isDark, style, ...props }) {
 
 export default function Rewriter() {
   const { isDark } = useTheme()
-  const { rewriteResults, setRewriteResults } = useApp()
+  const { rewriteResults, setRewriteResults, acceptedBullets, setAcceptedBullets } = useApp()
+  const navigate = useNavigate()
   const c = tc(isDark)
   const CARD = cs(isDark)
 
@@ -107,12 +109,18 @@ export default function Rewriter() {
     if (bullets.length < 8) setBullets(prev => [...prev, ''])
   }
 
-  const toggleAccepted = (i) =>
+  const toggleAccepted = (i) => {
     setAccepted(prev => {
       const next = new Set(prev)
       next.has(i) ? next.delete(i) : next.add(i)
+      // Sync full {original, rewritten} objects to context
+      const updated = rewrites
+        .filter((_, idx) => next.has(idx))
+        .map(r => ({ original: r.original, rewritten: r.rewritten }))
+      setAcceptedBullets(updated)
       return next
     })
+  }
 
   const handleRewrite = async () => {
     const filled = bullets.filter(b => b.trim())
@@ -121,6 +129,7 @@ export default function Rewriter() {
     setIsLoading(true)
     setError(null)
     setAccepted(new Set())
+    setAcceptedBullets([])
     try {
       const { data } = await rewriteBullets(filled, kwList, roleTitle)
       setRewrites(data.rewrites)
@@ -360,6 +369,23 @@ export default function Rewriter() {
           )}
         </div>
       </div>
+
+      {/* Export banner */}
+      {acceptedBullets.length > 0 && (
+        <button
+          onClick={() => navigate('/export')}
+          className="mt-6 w-full flex items-center justify-between px-5 py-3.5 rounded-xl transition-all"
+          style={{
+            background: isDark ? 'rgba(124,58,237,0.12)' : 'rgba(124,58,237,0.08)',
+            border: isDark ? '1px solid rgba(167,139,250,0.3)' : '1px solid rgba(124,58,237,0.25)',
+          }}
+        >
+          <span className="text-sm font-medium" style={{ color: isDark ? '#c4b5fd' : '#6d28d9' }}>
+            ✓ {acceptedBullets.length} bullet{acceptedBullets.length !== 1 ? 's' : ''} saved — go to Export to download your optimized resume
+          </span>
+          <ArrowRight size={16} style={{ color: isDark ? '#a78bfa' : '#7c3aed', flexShrink: 0 }} />
+        </button>
+      )}
     </div>
   )
 }
