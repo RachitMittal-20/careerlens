@@ -1,131 +1,19 @@
 import re
 from io import BytesIO
 
+from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.platypus import HRFlowable, Paragraph, SimpleDocTemplate
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _extract_name(raw_text: str) -> str:
-    for line in raw_text.strip().splitlines():
-        line = line.strip()
-        if line and len(line.split()) <= 5 and not re.search(r"[@|/\\]", line):
-            return line
-    return "Your Name"
-
-
-def _extract_contact(raw_text: str) -> str:
-    email_match = re.search(r"[\w.+-]+@[\w-]+\.[a-zA-Z]{2,}", raw_text)
-    phone_match = re.search(r"[\+\(]?\d[\d\s\-\(\)]{7,}\d", raw_text)
-    parts = []
-    if email_match:
-        parts.append(email_match.group())
-    if phone_match:
-        parts.append(phone_match.group().strip())
-    return "  |  ".join(parts) if parts else "email@example.com  |  +91-XXXXXXXXXX"
-
-
-def _split_bullets(text: str) -> list[str]:
-    """Return non-empty lines as individual bullet strings."""
-    lines = []
-    for line in text.strip().splitlines():
-        line = line.strip().lstrip("•-–* ")
-        if line:
-            lines.append(line)
-    return lines
-
-
-# ---------------------------------------------------------------------------
-# PDF rendering helpers
-# ---------------------------------------------------------------------------
-
-MARGIN = 72          # 1 inch in points
-LINE_HEIGHT = 14     # pt between body lines
-SECTION_GAP = 12     # pt between sections
-BULLET_INDENT = 15   # pt hanging indent for bullet lines
-PAGE_W, PAGE_H = A4
-
-
-def _new_canvas(buf: BytesIO) -> canvas.Canvas:
-    c = canvas.Canvas(buf, pagesize=A4)
-    c.setTitle("Optimized Resume")
-    c.setAuthor("CareerLens")
-    return c
-
-
-def _draw_hline(c: canvas.Canvas, y: float, width: float = PAGE_W - 2 * MARGIN) -> None:
-    c.setLineWidth(0.5)
-    c.line(MARGIN, y, MARGIN + width, y)
-
-
-def _draw_section_header(c: canvas.Canvas, title: str, y: float) -> float:
-    """Draw bold uppercase section title + thin underline. Returns new y."""
-    c.setFont("Helvetica-Bold", 11)
-    c.drawString(MARGIN, y, title.upper())
-    y -= 3
-    _draw_hline(c, y)
-    return y - 6
-
-
-def _wrap_text(text: str, font: str, size: int, max_width: float) -> list[str]:
-    """Naive word-wrap: split into lines that fit within max_width."""
-    from reportlab.pdfbase.pdfmetrics import stringWidth
-
-    words = text.split()
-    lines: list[str] = []
-    current = ""
-    for word in words:
-        candidate = (current + " " + word).strip()
-        if stringWidth(candidate, font, size) <= max_width:
-            current = candidate
-        else:
-            if current:
-                lines.append(current)
-            current = word
-    if current:
-        lines.append(current)
-    return lines or [""]
-
-
-def _draw_wrapped(
-    c: canvas.Canvas,
-    text: str,
-    y: float,
-    font: str = "Helvetica",
-    size: int = 10,
-    indent: float = 0,
-    bullet: bool = False,
-) -> float:
-    """Draw word-wrapped text, returning the new y position."""
-    max_w = PAGE_W - 2 * MARGIN - indent
-    prefix = "• " if bullet else ""
-    full_text = prefix + text if bullet else text
-    # For bullet continuation lines, increase indent to align past the bullet
-    hang = BULLET_INDENT if bullet else 0
-
-    lines = _wrap_text(full_text, font, size, max_w)
-    c.setFont(font, size)
-    for i, line in enumerate(lines):
-        x = MARGIN + indent + (hang if i > 0 else 0)
-        c.drawString(x, y, line)
-        y -= LINE_HEIGHT
-    return y
-
-
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
 
 SECTION_ORDER = ["summary", "experience", "skills", "education", "projects"]
 SECTION_LABELS = {
-    "summary": "Summary",
-    "experience": "Experience",
-    "skills": "Skills",
-    "education": "Education",
-    "projects": "Projects",
+    "summary":    "SUMMARY",
+    "experience": "EXPERIENCE",
+    "skills":     "SKILLS",
+    "education":  "EDUCATION",
+    "projects":   "PROJECTS",
 }
 
 
@@ -135,8 +23,7 @@ def generate_resume_pdf(
 ) -> bytes:
     optimized_bullets = optimized_bullets or []
 
-    # Build lookup: original bullet text → rewritten text
-    bullet_rewrites: dict[str, str] = {
+    bullet_lookup: dict[str, str] = {
         b["original"].strip(): b["rewritten"].strip()
         for b in optimized_bullets
         if b.get("rewritten")
@@ -145,53 +32,110 @@ def generate_resume_pdf(
     raw_text: str = resume_data.get("raw_text", "")
     sections: dict = resume_data.get("sections", {})
 
-    buf = BytesIO()
-    c = _new_canvas(buf)
-    y = PAGE_H - MARGIN
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=50, leftMargin=50,
+        topMargin=50, bottomMargin=50,
+    )
 
-    # --- Header ---
-    name = _extract_name(raw_text)
-    c.setFont("Helvetica-Bold", 16)
-    c.drawCentredString(PAGE_W / 2, y, name)
-    y -= 20
+    getSampleStyleSheet()  # initialise default styles
 
-    contact = _extract_contact(raw_text)
-    c.setFont("Helvetica", 10)
-    c.drawCentredString(PAGE_W / 2, y, contact)
-    y -= 8
+    name_style = ParagraphStyle(
+        "Name", fontSize=18, fontName="Helvetica-Bold",
+        alignment=1, spaceAfter=4,
+    )
+    contact_style = ParagraphStyle(
+        "Contact", fontSize=9, fontName="Helvetica",
+        alignment=1, spaceAfter=2,
+        textColor=colors.HexColor("#555555"),
+    )
+    section_style = ParagraphStyle(
+        "Section", fontSize=11, fontName="Helvetica-Bold",
+        spaceBefore=14, spaceAfter=4,
+        textColor=colors.HexColor("#111111"),
+    )
+    body_style = ParagraphStyle(
+        "Body", fontSize=10, fontName="Helvetica",
+        spaceAfter=3, leading=14,
+    )
+    bullet_style = ParagraphStyle(
+        "Bullet", fontSize=10, fontName="Helvetica",
+        spaceAfter=2, leading=13,
+        leftIndent=15, firstLineIndent=-10,
+    )
 
-    _draw_hline(c, y)
-    y -= SECTION_GAP
+    story = []
+
+    # --- Name ---
+    lines = [l.strip() for l in raw_text.split("\n") if l.strip()]
+    name = lines[0] if lines else "Your Name"
+    story.append(Paragraph(name, name_style))
+
+    # --- Contact line ---
+    email_m = re.search(r"[\w.\+-]+@[\w\.-]+\.\w+", raw_text)
+    phone_m = re.search(r"[\+\(]?\d[\d\s\-\(\)]{7,}\d", raw_text)
+    url_m   = re.search(r"https?://[^\s]+", raw_text[:600])
+
+    contact_parts = []
+    if email_m:
+        contact_parts.append(email_m.group())
+    if phone_m:
+        contact_parts.append(phone_m.group().strip())
+    if url_m:
+        contact_parts.append(url_m.group())
+
+    if contact_parts:
+        story.append(Paragraph("  |  ".join(contact_parts), contact_style))
+
+    story.append(HRFlowable(
+        width="100%", thickness=1,
+        color=colors.HexColor("#cccccc"), spaceAfter=8,
+    ))
 
     # --- Sections ---
-    for key in SECTION_ORDER:
-        content = sections.get(key, "").strip()
-        if not content:
-            continue
+    has_sections = any(sections.get(k, "").strip() for k in SECTION_ORDER)
 
-        y = _draw_section_header(c, SECTION_LABELS[key], y)
+    if has_sections:
+        for key in SECTION_ORDER:
+            content = sections.get(key, "").strip()
+            if not content:
+                continue
 
-        bullets = _split_bullets(content)
+            story.append(Paragraph(SECTION_LABELS[key], section_style))
+            story.append(HRFlowable(
+                width="100%", thickness=0.5,
+                color=colors.HexColor("#dddddd"), spaceAfter=4,
+            ))
 
-        if key == "experience" and bullet_rewrites:
-            replaced = []
-            for b in bullets:
-                replaced.append(bullet_rewrites.get(b, b))
-            bullets = replaced
+            for line in content.splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                # Skip if the line is just the section header echoed in content
+                if line.upper() in SECTION_LABELS.values():
+                    continue
 
-        for bullet in bullets:
-            # Check page overflow — leave 40pt buffer before bottom margin
-            if y < MARGIN + 40:
-                c.showPage()
-                y = PAGE_H - MARGIN
+                is_bullet = line.startswith(("•", "-", "*", "·"))
+                if is_bullet:
+                    text = line.lstrip("•-*· ").strip()
+                    text = bullet_lookup.get(text, text)
+                    story.append(Paragraph(f"• {text}", bullet_style))
+                else:
+                    story.append(Paragraph(line, body_style))
+    else:
+        # Fall back to rendering raw text when sections weren't detected
+        story.append(Paragraph("RESUME", section_style))
+        story.append(HRFlowable(
+            width="100%", thickness=0.5,
+            color=colors.HexColor("#dddddd"), spaceAfter=4,
+        ))
+        for line in raw_text.splitlines():
+            line = line.strip()
+            if line and line != name:
+                story.append(Paragraph(line, body_style))
 
-            y = _draw_wrapped(
-                c, bullet, y,
-                font="Helvetica", size=10,
-                indent=0, bullet=True,
-            )
-
-        y -= SECTION_GAP
-
-    c.save()
-    return buf.getvalue()
+    doc.build(story)
+    buffer.seek(0)
+    return buffer.getvalue()

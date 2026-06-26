@@ -1,7 +1,15 @@
 import { Loader2, Plus, Trash2, Wand2 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useApp } from '../context/AppContext'
 import { useTheme } from '../context/ThemeContext'
 import { rewriteBullets } from '../services/api'
+
+function loadInputs() {
+  try {
+    const s = sessionStorage.getItem('careerlens-rewriter-inputs')
+    return s ? JSON.parse(s) : null
+  } catch { return null }
+}
 
 const cs = (isDark) => ({
   background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.65)',
@@ -69,17 +77,25 @@ function StyledTextarea({ isDark, style, ...props }) {
 
 export default function Rewriter() {
   const { isDark } = useTheme()
+  const { rewriteResults, setRewriteResults } = useApp()
   const c = tc(isDark)
   const CARD = cs(isDark)
 
-  const [bullets, setBullets]       = useState(['', '', ''])
-  const [roleTitle, setRoleTitle]   = useState('')
-  const [jdKeywords, setJdKeywords] = useState('')
+  const _saved = loadInputs()
+  const [bullets, setBullets]       = useState(() => _saved?.bullets    || ['', '', ''])
+  const [roleTitle, setRoleTitle]   = useState(() => _saved?.roleTitle  || '')
+  const [jdKeywords, setJdKeywords] = useState(() => _saved?.jdKeywords || '')
   const [isLoading, setIsLoading]   = useState(false)
-  const [rewrites, setRewrites]     = useState([])
+  const [rewrites, setRewrites]     = useState(() => rewriteResults?.rewrites || [])
   const [accepted, setAccepted]     = useState(new Set())
   const [error, setError]           = useState(null)
   const [copied, setCopied]         = useState(false)
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('careerlens-rewriter-inputs', JSON.stringify({ bullets, roleTitle, jdKeywords }))
+    } catch {}
+  }, [bullets, roleTitle, jdKeywords])
 
   const updateBullet = (i, val) =>
     setBullets(prev => prev.map((b, idx) => (idx === i ? val : b)))
@@ -108,6 +124,7 @@ export default function Rewriter() {
     try {
       const { data } = await rewriteBullets(filled, kwList, roleTitle)
       setRewrites(data.rewrites)
+      setRewriteResults({ rewrites: data.rewrites })
     } catch (err) {
       setError(err?.response?.data?.detail ?? 'Rewrite failed. Is the backend running?')
     } finally {

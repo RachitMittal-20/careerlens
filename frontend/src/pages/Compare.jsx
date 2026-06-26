@@ -1,5 +1,6 @@
 import { CheckCircle, Lightbulb, Loader2 } from 'lucide-react'
 import { useState } from 'react'
+import { useApp } from '../context/AppContext'
 import { useTheme } from '../context/ThemeContext'
 import { compareJDs } from '../services/api'
 
@@ -102,12 +103,13 @@ const EMPTY_JD = { title: '', text: '' }
 
 export default function Compare() {
   const { isDark } = useTheme()
+  const { compareResults, setCompareResults } = useApp()
   const c = tc(isDark)
   const CARD = cs(isDark)
 
   const [jds, setJds]             = useState([{ ...EMPTY_JD }, { ...EMPTY_JD }, { ...EMPTY_JD }])
   const [isLoading, setIsLoading] = useState(false)
-  const [results, setResults]     = useState(null)
+  const [results, setResults]     = useState(() => compareResults)
   const [error, setError]         = useState(null)
   const [copied, setCopied]       = useState(false)
 
@@ -124,6 +126,7 @@ export default function Compare() {
       const texts = jds.filter(j => j.text.trim()).map(j => j.text)
       const { data } = await compareJDs(texts)
       setResults(data)
+      setCompareResults(data)
     } catch (err) {
       setError(err?.response?.data?.detail ?? 'Comparison failed. Is the backend running?')
     } finally {

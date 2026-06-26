@@ -4,8 +4,10 @@ import {
   Loader2,
   Search,
   Upload,
+  X,
 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useApp } from '../context/AppContext'
 import { useTheme } from '../context/ThemeContext'
 import { analyzeResume } from '../services/api'
 
@@ -226,13 +228,14 @@ function StatMini({ label, value, isDark }) {
 
 export default function Analyzer() {
   const { isDark } = useTheme()
+  const { analyzerResults, setAnalyzerResults } = useApp()
   const c = tc(isDark)
   const CARD = cs(isDark)
 
   const [resumeFile, setResumeFile] = useState(null)
   const [jdText, setJdText]         = useState('')
   const [isLoading, setIsLoading]   = useState(false)
-  const [results, setResults]       = useState(null)
+  const [results, setResults]       = useState(() => analyzerResults)
   const [error, setError]           = useState(null)
   const [dragOver, setDragOver]     = useState(false)
 
@@ -266,6 +269,7 @@ export default function Analyzer() {
     try {
       const { data } = await analyzeResume(resumeFile, jdText)
       setResults(data)
+      setAnalyzerResults(data)
     } catch (err) {
       setError(err?.response?.data?.detail ?? 'Analysis failed. Is the backend running?')
     } finally {
@@ -377,6 +381,17 @@ export default function Analyzer() {
 
         {/* RIGHT */}
         <div className="flex flex-col gap-4">
+          {results != null && (
+            <div className="flex justify-end">
+              <button
+                onClick={() => { setResults(null); setAnalyzerResults(null) }}
+                className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg transition-all"
+                style={{ color: c.label, background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.15)' }}
+              >
+                <X size={11} /> Clear results
+              </button>
+            </div>
+          )}
           {results == null ? (
             <div className="flex flex-col items-center justify-center h-full min-h-64 text-center gap-3">
               <BarChart2 size={48} style={{ color: isDark ? 'rgba(139,92,246,0.3)' : 'rgba(124,58,237,0.25)' }} />
